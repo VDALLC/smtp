@@ -24,7 +24,8 @@
  * @version     1.3
  */
 
-namespace Hujuice\Smtp;
+namespace Vda\Smtp;
+
 use Exception;
 
 /**
@@ -77,16 +78,6 @@ class Smtp
      * @link @link http://www.fehcom.de/qmail/smtpauth.html
      */
     const BYE = '221';
-
-    /**
-     * Mailer
-     */
-    const MAILER = 'PHP smtp class';
-
-    /**
-     * Mailer author
-     */
-    const MAILER_AUTHOR = '"Sergio Vaccaro" <hujuice@inservibile.org> https://github.com/hujuice/smtp';
 
     /**
      * SMTP socket resource
@@ -770,10 +761,6 @@ class Smtp
             // Priority
             if ($this->_priority)
                 $message .= 'X-Priority: ' . $this->_priority . self::NL;
-
-            // Mailer
-            $message .= 'X-mailer: ' . self::MAILER . self::NL;
-            $message .= 'X-mailer-author: ' . self::MAILER_AUTHOR . self::NL;
 
             // Custom headers
             foreach ($this->_headers as $name => $value)

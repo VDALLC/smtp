@@ -1,5 +1,5 @@
 <?php
-use Hujuice\Smtp\Smtp;
+use Vda\Smtp\Smtp;
 
 class SmtpTestClass extends PHPUnit_Framework_TestCase
 {
