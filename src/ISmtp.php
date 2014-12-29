@@ -46,5 +46,17 @@ interface ISmtp
      */
     const BYE = '221';
 
+    /**
+     * Send.
+     *
+     * Connect to smtp server if needed and send data.
+     *
+     * @param $from
+     * @param $to
+     * @param $data
+     * @return bool
+     */
     public function send($from, $to, $data);
+
+    public function disconnect();
 }

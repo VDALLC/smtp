@@ -21,7 +21,6 @@
  * @author      Sergio Vaccaro <sergiovaccaro67@gmail.com>
  * @copyright   Copyright (c) Sergio Vaccaro
  * @license     http://www.gnu.org/licenses/gpl-3.0.txt     GPLv3
- * @version     1.8
  */
 
 namespace Vda\Smtp;

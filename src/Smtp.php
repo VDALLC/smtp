@@ -21,7 +21,6 @@
  * @author      Sergio Vaccaro <sergiovaccaro67@gmail.com>
  * @copyright   Copyright (c) Sergio Vaccaro
  * @license     http://www.gnu.org/licenses/gpl-3.0.txt     GPLv3
- * @version     1.8
  */
 
 namespace Vda\Smtp;
@@ -108,7 +107,7 @@ class Smtp implements ISmtp
      * Connection to the SMTP server
      * @throws Exception
      */
-    public function _connect()
+    public function connect()
     {
         // Connect (if not already connected)
         if (empty($this->_smtp)) {
@@ -188,16 +187,21 @@ class Smtp implements ISmtp
         return $this->_readResponse($expect);
     }
 
+    public function disconnect()
+    {
+        if ($this->_smtp) {
+            $this->_dialog('QUIT', self::BYE);
+            fclose($this->_smtp);
+            $this->_smtp = null;
+        }
+    }
+
     /**
      * Closes connection
      */
     public function __destruct()
     {
-
-        if ($this->_smtp) {
-            $this->_dialog('QUIT', self::BYE);
-            fclose($this->_smtp);
-        }
+        $this->disconnect();
     }
 
     /**
@@ -225,7 +229,7 @@ class Smtp implements ISmtp
      */
     public function send($from, $to, $data)
     {
-        $this->_connect();
+        $this->connect();
 
         $this->_dialog("MAIL FROM: <{$from}>", self::OK);
 

@@ -1,6 +1,6 @@
 {
     "name": "vda/smtp",
-    "version": "1.8",
+    "version": "1.9",
     "autoload": {
         "psr-4": {
             "Vda\\Smtp\\": "src/"
