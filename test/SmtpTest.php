@@ -12,11 +12,7 @@ class SmtpTestClass extends PHPUnit_Framework_TestCase
     public function testSend()
     {
         $smtp = new Smtp('localhost');
-        $smtp->from('foo@example.com');
-        $smtp->to('bar@example.com');
-        $smtp->subject('Test');
-        $smtp->text('Test');
-        $res = $smtp->send();
-        $this->assertStringStartsWith('Message queued for delivery', $res);
+        $res = $smtp->send('foo@example.com', 'bar@example.com', 'Test');
+        $this->assertStringStartsWith('250 ', $res);
     }
 }
