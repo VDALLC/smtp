@@ -26,6 +26,7 @@
 namespace Vda\Smtp;
 
 use Exception;
+use Vda\Smtp\Exception\ConnectionException;
 
 /**
  * Rich SMTP client
@@ -90,7 +91,7 @@ class Smtp implements ISmtp
     {
         // Avoid a warning
         if (empty($host)) {
-            throw new Exception('Undefined SMTP server');
+            throw new ConnectionException('Undefined SMTP server');
         }
 
         // Settings
@@ -113,7 +114,7 @@ class Smtp implements ISmtp
         if (empty($this->_smtp)) {
             if ($this->_smtp = fsockopen($this->_server['host'], $this->_server['port'], $errno, $errstr, $this->_server['timeout'])) {
                 if (substr($response = fgets($this->_smtp), 0, 3) != self::READY) {
-                    throw new Exception('Server NOT ready! The server responded with this message:' . PHP_EOL . $response);
+                    throw new ConnectionException('Server NOT ready! The server responded with this message:' . PHP_EOL . $response);
                 }
 
                 $this->_log = $response . PHP_EOL;
@@ -134,7 +135,7 @@ class Smtp implements ISmtp
                 if (!empty($errstr)) {
                     $message .= 'The remote server responded:' . PHP_EOL . $errstr . '(' . $errno . ')';
                 }
-                throw new Exception($message);
+                throw new ConnectionException($message);
             }
         }
     }

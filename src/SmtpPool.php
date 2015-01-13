@@ -2,6 +2,7 @@
 namespace Vda\Smtp;
 
 use Exception;
+use Vda\Smtp\Exception\ConnectionException;
 
 class SmtpPool implements ISmtp
 {
@@ -11,6 +12,8 @@ class SmtpPool implements ISmtp
      * @var ISmtp[]
      */
     protected $instances = array();
+
+    protected $maxTries;
 
     protected $index = -1;
 
@@ -37,6 +40,8 @@ class SmtpPool implements ISmtp
                 'port'  => $smtpSpec[1],
             );
         }
+
+        $this->maxTries = count($this->specs);
     }
 
     /**
@@ -61,7 +66,18 @@ class SmtpPool implements ISmtp
 
     public function send($from, $to, $data)
     {
-        $this->getInstance()->send($from, $to, $data);
+        $tries = $this->maxTries;
+        while ($tries) {
+            try {
+                $this->getInstance()->send($from, $to, $data);
+                return;
+            } catch (ConnectionException $ex) {
+                $tries--;
+                if ($tries == 0) {
+                    throw $ex;
+                }
+            }
+        }
     }
 
     public function disconnect()

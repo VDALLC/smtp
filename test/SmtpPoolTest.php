@@ -1,4 +1,5 @@
 <?php
+use Vda\Smtp\Exception\ConnectionException;
 use Vda\Smtp\SmtpPool;
 
 class Acc
@@ -32,6 +33,14 @@ class TestSmtp implements \Vda\Smtp\ISmtp
     }
 }
 
+class ErrorSmtp extends TestSmtp
+{
+    public function send($from, $to, $data)
+    {
+        throw new ConnectionException("Test Error");
+    }
+}
+
 class SmtpPoolTestClass extends PHPUnit_Framework_TestCase
 {
     public function testSmtpPoolRoundRobin()
@@ -53,6 +62,35 @@ localhost:27::send(a@g.com, b@g.com)
 localhost:25::send(a@g.com, b@g.com)
 localhost:26::send(a@g.com, b@g.com)
 localhost:27::send(a@g.com, b@g.com)
+
+LOG;
+
+        $this->assertEquals($expectedLog, $acc->log);
+    }
+
+    public function testSmtpPoolOneSmtpIsDown()
+    {
+        $acc = new Acc();
+
+        $pool = new SmtpPool('localhost:25,localhost:26,localhost:27', function($host, $port) use ($acc) {
+            if ($port == 27) {
+                return new ErrorSmtp($acc, $host . ':' . $port);
+            } else {
+                return new TestSmtp($acc, $host . ':' . $port);
+            }
+        });
+
+        for ($i = 1 ; $i <= 6 ; $i++) {
+            $pool->send('a@g.com', 'b@g.com', 'test');
+        }
+
+        $expectedLog = <<<LOG
+localhost:25::send(a@g.com, b@g.com)
+localhost:26::send(a@g.com, b@g.com)
+localhost:25::send(a@g.com, b@g.com)
+localhost:26::send(a@g.com, b@g.com)
+localhost:25::send(a@g.com, b@g.com)
+localhost:26::send(a@g.com, b@g.com)
 
 LOG;
 
