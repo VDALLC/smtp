@@ -120,7 +120,7 @@ class Smtp implements ISmtp
                 $this->_log = $response . PHP_EOL;
 
                 // EHLO
-                $ehlo = $this->_dialog('EHLO ', self::OK);
+                $ehlo = $this->_dialog('EHLO todo', self::OK);
                 $this->_pipelining = preg_match('~250[\s-]pipelining~i', $ehlo);
 
                 // Auth
