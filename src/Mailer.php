@@ -132,6 +132,15 @@ class Mailer
      */
     protected $_raw = array();
 
+    /**
+     * Body of last sent message.
+     *
+     * For testing purpose.
+     *
+     * @var string
+     */
+    protected $_lastMessageBody;
+
     protected $smtp;
 
     public function __construct(ISmtp $smtp)
@@ -303,8 +312,9 @@ class Mailer
      */
     public function header($name = null, $value = null)
     {
-        if ($name)
-            $this->_headers[(string) $name] = (string) $value;
+        if ($name) {
+            $this->_headers[$this->normalizeHeader($name)] = (string)$value;
+        }
         return $this->_headers;
     }
 
@@ -418,6 +428,19 @@ class Mailer
         $this->_raw = array();
     }
 
+    public function normalizeHeader($name)
+    {
+        return preg_replace_callback(
+            '~(^|[^a-z])[a-z]~',
+            function($matches) {
+                $n = strlen($matches[1]);
+                $matches[0][$n] = strtoupper($matches[0][$n]);
+                return $matches[0];
+            },
+            strtolower(trim($name))
+        );
+    }
+
     /**
      * Send
      *
@@ -443,15 +466,16 @@ class Mailer
         // Message
         $message = '';
 
-        // From
-        if (empty($this->_from['name']))
-            $message .= 'From: <' . $this->_from['address'] . '>' . ISmtp::NL;
-        else
-            $message .= 'From: "' . $this->_encode($this->_from['name']) . '"<' . $this->_from['address'] . '>' . ISmtp::NL;
+        if (empty($this->_headers['From'])) {
+            // From
+            if (empty($this->_from['name']))
+                $message .= 'From: <' . $this->_from['address'] . '>' . ISmtp::NL;
+            else
+                $message .= 'From: "' . $this->_encode($this->_from['name']) . '"<' . $this->_from['address'] . '>' . ISmtp::NL;
+        }
 
         // Reply to
-        if (!empty($this->_replyTo))
-        {
+        if (empty($this->_headers['Reply-To']) && !empty($this->_replyTo)) {
             if (empty($this->_replyTo['name']))
                 $message .= 'Reply-To: <' . $this->_replyTo['address'] . '>' . ISmtp::NL;
             else
@@ -459,45 +483,56 @@ class Mailer
         }
 
         // To
-        foreach ($this->_to as $name => $rcpt)
-        {
-            if (is_integer($name))
-                $message .= 'To: <' . $rcpt . '>' . ISmtp::NL;
-            else
-                $message .= 'To: "' . $this->_encode($name) . '"<' . $rcpt . '>' . ISmtp::NL;
+        if (empty($this->_headers['To'])) {
+            foreach ($this->_to as $name => $rcpt)
+            {
+                if (is_integer($name))
+                    $message .= 'To: <' . $rcpt . '>' . ISmtp::NL;
+                else
+                    $message .= 'To: "' . $this->_encode($name) . '"<' . $rcpt . '>' . ISmtp::NL;
+            }
         }
 
         // Cc
-        foreach ($this->_cc as $name => $rcpt)
-        {
-            if (is_integer($name))
-                $message .= 'Cc: <' . $rcpt . '>' . ISmtp::NL;
-            else
-                $message .= 'Cc: "' . $this->_encode($name) . '"<' . $rcpt . '>' . ISmtp::NL;
+        if (empty($this->_headers['Cc'])) {
+            foreach ($this->_cc as $name => $rcpt)
+            {
+                if (is_integer($name))
+                    $message .= 'Cc: <' . $rcpt . '>' . ISmtp::NL;
+                else
+                    $message .= 'Cc: "' . $this->_encode($name) . '"<' . $rcpt . '>' . ISmtp::NL;
+            }
         }
 
         // Bcc
-        foreach ($this->_bcc as $name => $rcpt)
-        {
-            if (is_integer($name))
-                $message .= 'Bcc: <' . $rcpt . '>' . ISmtp::NL;
-            else
-                $message .= 'Bcc: "' . $this->_encode($name) . '"<' . $rcpt . '>' . ISmtp::NL;
+        if (empty($this->_headers['Bcc'])) {
+            foreach ($this->_bcc as $name => $rcpt)
+            {
+                if (is_integer($name))
+                    $message .= 'Bcc: <' . $rcpt . '>' . ISmtp::NL;
+                else
+                    $message .= 'Bcc: "' . $this->_encode($name) . '"<' . $rcpt . '>' . ISmtp::NL;
+            }
         }
 
         // Priority
-        if ($this->_priority)
+        if (empty($this->_headers['X-Priority']) && $this->_priority) {
             $message .= 'X-Priority: ' . $this->_priority . ISmtp::NL;
+        }
 
         // Custom headers
         foreach ($this->_headers as $name => $value)
             $message .= $name . ': ' . $value. ISmtp::NL;
 
         // Date
-        $message .= 'Date: ' . date('r') . ISmtp::NL;
+        if (empty($this->_headers['Date'])) {
+            $message .= 'Date: ' . date('r') . ISmtp::NL;
+        }
 
         // Subject
-        $message .= 'Subject: ' . $this->_encode($this->_subject) . ISmtp::NL;
+        if (empty($this->_headers['Subject'])) {
+            $message .= 'Subject: ' . $this->_encode($this->_subject) . ISmtp::NL;
+        }
 
         // Message
         /*
@@ -565,7 +600,15 @@ class Mailer
             array_values($this->_cc),
             array_values($this->_bcc)
         );
+
+        $this->_lastMessageBody = $message;
+
         $res = $this->smtp->send($this->_from['address'], $recipients, $message);
         return substr($res, 0, 3) == ISmtp::OK;
+    }
+
+    public function getLastMessageBody()
+    {
+        return $this->_lastMessageBody;
     }
 }
