@@ -230,7 +230,10 @@ class Smtp implements ISmtp
      */
     public function send($from, $to, $data)
     {
+        $this->_log = '';
+
         $this->connect();
+        $this->_dialog('RSET', self::OK);
 
         $this->_dialog("MAIL FROM: <{$from}>", self::OK);
 
