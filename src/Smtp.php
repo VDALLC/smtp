@@ -152,7 +152,7 @@ class Smtp implements ISmtp
         $this->_log .= $response;
 
         if (substr($response, 0, 3) != $expected) {
-            throw new Exception("Unexpected response. Expected {$expected}. Here is the dialog dump:\n{$this->_log}");
+            throw new Exception("Unexpected response {$response}. Expected {$expected}. Here is the dialog dump:\n{$this->_log}");
         }
 
         return $response;
