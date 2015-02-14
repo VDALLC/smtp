@@ -140,7 +140,13 @@ class Smtp implements ISmtp
         }
     }
 
-    protected function _readResponse($expected)
+    /**
+     * @param $expected
+     * @param null|Exception $prevException used in collecting all smtp responses in pipelining mode.
+     * @return string
+     * @throws Exception
+     */
+    protected function _readResponse($expected, $prevException = null)
     {
         $response = '';
         while (($line = fgets($this->_smtp)) !== false) {
@@ -152,7 +158,7 @@ class Smtp implements ISmtp
         $this->_log .= $response;
 
         if (substr($response, 0, 3) != $expected) {
-            throw new Exception("Unexpected response {$response}. Expected {$expected}. Here is the dialog dump:\n{$this->_log}");
+            throw new Exception("Unexpected response {$response}. Expected {$expected}. Here is the dialog dump:\n{$this->_log}", 0, $prevException);
         }
 
         return $response;
@@ -178,9 +184,24 @@ class Smtp implements ISmtp
                 $this->_pipelinedCommands[] = $expect;
                 return null;
             } else {
+                $exception = null;
                 while ($this->_pipelinedCommands) {
                     $_expected = array_shift($this->_pipelinedCommands);
-                    $this->_readResponse($_expected);
+                    try {
+                        $this->_readResponse($_expected, $exception);
+                    } catch (Exception $ex) {
+                        // Do not break while here
+                        // Ensure all results are read in case of exception in the middle
+                        $exception = $ex;
+                    }
+                }
+                if ($exception) {
+                    // Ensure last result are also read in case of exception in the middle
+                    $this->_readResponse($expect, $exception);
+                    // live above may generate exception (for ex. smtp server will not
+                    // accept DATA command after single invalid RCPT TO:), but to be sure
+                    // throw exception as final statement.
+                    throw $exception;
                 }
             }
         }

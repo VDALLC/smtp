@@ -1,24 +1,24 @@
 <?php
 use Vda\Smtp\Smtp;
 
-class ErroneousSmtp extends Smtp
+class PipelinedSmtp extends Smtp
 {
     public $generateException = true;
-    protected $_lastCommand;
+
+    public function connect()
+    {
+        parent::connect();
+        $this->_pipelining = true;
+    }
 
     protected function _dialog($request, $expect)
     {
-        $this->_lastCommand = $request;
-        return parent::_dialog($request, $expect);
-    }
-
-    protected function _readResponse($expected)
-    {
-        $res = parent::_readResponse($expected);
-        if ($this->generateException && preg_match('~^MAIL FROM:~', $this->_lastCommand)) {
-            throw new Exception("Unexpected response. Expected {$expected}. Here is the dialog dump:\n{$this->_log}");
+        if ($this->generateException && $request == 'DATA') {
+            // force error on DATA after invalid RCPT TO: (DevNullSmtp.jar specific:
+            // DevNullSmtp.jar accepts DATA command after single invalid RCPT TO:)
+            $request = 'DATAAA';
         }
-        return $res;
+        return parent::_dialog($request, $expect);
     }
 }
 
@@ -44,18 +44,55 @@ class SmtpTestClass extends PHPUnit_Framework_TestCase
      *  Exception: Unexpected response. Expected 250. Here is the dialog dump:
      *  MAIL FROM: <foo@example.com>
      *  503 Sender already specified
+     *
+     * @expectedException Exception
+     * @expectedExceptionMessage Ensure exception raised
      */
     public function testErroneousSmtp()
     {
-        $smtp = new ErroneousSmtp('localhost');
+        $smtp = new Smtp('localhost');
         try {
             // generate exception
-            $smtp->send('foo@example.com', 'bar@example.com', 'Test');
+            $smtp->send('foo@example.com', 'qwe', 'Test');
         } catch (Exception $ex) {
             // then verify send is successful after exception
             $smtp->generateException = false;
             $res = $smtp->send('foo@example.com', 'bar@example.com', 'Test');
             $this->assertStringStartsWith('250 ', $res);
+
+            throw new Exception('Ensure exception raised');
+        }
+    }
+
+    /**
+     * Test reading all pipelined results in case of exception in the middle.
+     *
+     * Without reading all _pipelinedCommands results in _dialog you will get timeout and:
+     *  Unexpected response . Expected 250. Here is the dialog dump:
+     *  RSET
+     *  MAIL FROM: <foo@example.com>
+     *  RCPT TO: <bar@example.com>
+     *  DATA
+     *  250 OK
+     *  354 Start mail input; end with <CRLF>.<CRLF>
+     *  QUIT
+     *
+     * @expectedException Exception
+     * @expectedExceptionMessage Ensure exception raised
+     */
+    public function testErroneousPipeliningSmtp()
+    {
+        $smtp = new PipelinedSmtp('localhost');
+        try {
+            // generate exception
+            $smtp->send('foo@example.com', 'qwe', 'Test');
+        } catch (Exception $ex) {
+            // then verify send is successful after exception
+            $smtp->generateException = false;
+            $res = $smtp->send('foo@example.com', 'bar@example.com', 'Test');
+            $this->assertStringStartsWith('250 ', $res);
+
+            throw new Exception('Ensure exception raised');
         }
     }
 }
