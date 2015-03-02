@@ -114,6 +114,7 @@ class Smtp implements ISmtp
         if (empty($this->_smtp)) {
             if ($this->_smtp = fsockopen($this->_server['host'], $this->_server['port'], $errno, $errstr, $this->_server['timeout'])) {
                 if (substr($response = fgets($this->_smtp), 0, 3) != self::READY) {
+                    $this->close();
                     throw new ConnectionException('Server NOT ready! The server responded with this message:' . PHP_EOL . $response);
                 }
 
@@ -131,6 +132,7 @@ class Smtp implements ISmtp
                     $this->_dialog($this->_pass, self::AUTHOK);
                 }
             } else {
+                $this->_smtp = null;
                 $message = 'Unable to connect to ' . $this->_server['host'] . ' on port ' . $this->_server['port'] . ' within ' . $this->_server['timeout'] . ' seconds' . PHP_EOL;
                 if (!empty($errstr)) {
                     $message .= 'The remote server responded:' . PHP_EOL . $errstr . '(' . $errno . ')';
@@ -159,7 +161,12 @@ class Smtp implements ISmtp
 
         if (substr($response, 0, 3) != $expected) {
             $type = gettype($response);
-            $eof = feof($this->_smtp) ? 'EOF - true' : 'EOF - false';
+            if (feof($this->_smtp)) {
+                $this->close();
+                $eof = 'EOF - true';
+            } else {
+                $eof = 'EOF - false';
+            }
             $msg = "Unexpected response {$type}:'{$response}'. {$eof}. Expected {$expected}. Here is the dialog dump:\n{$this->_log}";
             throw new Exception($msg, 0, $prevException);
         }
@@ -212,12 +219,21 @@ class Smtp implements ISmtp
         return $this->_readResponse($expect);
     }
 
+    protected function close()
+    {
+        if ($this->_smtp) {
+            fclose($this->_smtp);
+            $this->_smtp = null;
+        }
+    }
+
     public function disconnect()
     {
         if ($this->_smtp) {
-            $this->_dialog('QUIT', self::BYE);
-            fclose($this->_smtp);
-            $this->_smtp = null;
+            try {
+                $this->_dialog('QUIT', self::BYE);
+            } catch (Exception $ex) {}
+            $this->close();
         }
     }
 

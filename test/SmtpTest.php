@@ -56,7 +56,6 @@ class SmtpTestClass extends PHPUnit_Framework_TestCase
             $smtp->send('foo@example.com', 'qwe', 'Test');
         } catch (Exception $ex) {
             // then verify send is successful after exception
-            $smtp->generateException = false;
             $res = $smtp->send('foo@example.com', 'bar@example.com', 'Test');
             $this->assertStringStartsWith('250 ', $res);
 
