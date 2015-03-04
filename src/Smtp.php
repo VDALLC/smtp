@@ -161,13 +161,18 @@ class Smtp implements ISmtp
 
         if (substr($response, 0, 3) != $expected) {
             $type = gettype($response);
+            $msg = "Unexpected response {$type}:'{$response}'. ";
             if (feof($this->_smtp)) {
                 $this->close();
-                $eof = 'EOF - true';
+                $msg .= 'EOF - true. ';
             } else {
-                $eof = 'EOF - false';
+                $msg .= 'EOF - false. ';
+                if ($response == '') {
+                    $msg .= 'Timeout? Reconnecting. ';
+                    $this->close();
+                }
             }
-            $msg = "Unexpected response {$type}:'{$response}'. {$eof}. Expected {$expected}. Here is the dialog dump:\n{$this->_log}";
+            $msg .= "Expected {$expected}. Here is the dialog dump:\n{$this->_log}";
             throw new Exception($msg, 0, $prevException);
         }
 
