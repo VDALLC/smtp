@@ -150,7 +150,7 @@ class Smtp implements ISmtp
      */
     protected function _readResponse($expected, $prevException = null)
     {
-        $response = '';
+        $response = null;
         while (($line = fgets($this->_smtp)) !== false) {
             $response .= $line;
             if ($line[3] != '-') {
@@ -167,13 +167,18 @@ class Smtp implements ISmtp
                 $msg .= 'EOF - true. ';
             } else {
                 $msg .= 'EOF - false. ';
-                if ($response == '') {
+                if (empty($response)) {
                     $msg .= 'Timeout? Reconnecting. ';
                     $this->close();
                 }
             }
             $msg .= "Expected {$expected}. Here is the dialog dump:\n{$this->_log}";
-            throw new Exception($msg, 0, $prevException);
+            if ($this->_smtp === null) {
+                // if connection was unexpectedly closed raise ConnectionException
+                throw new ConnectionException($msg, 0, $prevException);
+            } else {
+                throw new Exception($msg, 0, $prevException);
+            }
         }
 
         return $response;
@@ -213,7 +218,7 @@ class Smtp implements ISmtp
                 if ($exception) {
                     // Ensure last result are also read in case of exception in the middle
                     $this->_readResponse($expect, $exception);
-                    // live above may generate exception (for ex. smtp server will not
+                    // line above may generate exception (for ex. smtp server will not
                     // accept DATA command after single invalid RCPT TO:), but to be sure
                     // throw exception as final statement.
                     throw $exception;
@@ -287,7 +292,10 @@ class Smtp implements ISmtp
         }
 
         $this->_dialog('DATA', self::DATAOK);
-        $message = $data . self::NL . '.'; // The _dialog function below will add self::NL;
+        // dot-stuffing
+        $data = preg_replace('~(^|[\n\r])\.($|[\n\r])~', '\1..\2', $data);
+        // The _dialog function below will add self::NL after end of $message
+        $message = $data . self::NL . '.';
         return $this->_dialog($message, self::OK);
     }
 

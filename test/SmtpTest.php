@@ -37,6 +37,23 @@ class SmtpTestClass extends PHPUnit_Framework_TestCase
         $this->assertStringStartsWith('250 ', $res);
     }
 
+    public function testSingleDot()
+    {
+        $smtp = new Smtp('localhost');
+
+        $res = $smtp->send('foo@example.com', 'bar@example.com', "Test\n.\nQwe");
+        $this->assertStringStartsWith('250 ', $res);
+
+        $res = $smtp->send('foo@example.com', 'bar@example.com', "Test\n\r.");
+        $this->assertStringStartsWith('250 ', $res);
+
+        $res = $smtp->send('foo@example.com', 'bar@example.com', ".\rQwe");
+        $this->assertStringStartsWith('250 ', $res);
+
+        $res = $smtp->send('foo@example.com', 'bar@example.com', "Test");
+        $this->assertStringStartsWith('250 ', $res);
+    }
+
     /**
      * Test issuing RSET command.
      *
