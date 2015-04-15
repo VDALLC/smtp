@@ -112,7 +112,7 @@ class Smtp implements ISmtp
     {
         // Connect (if not already connected)
         if (empty($this->_smtp)) {
-            if ($this->_smtp = fsockopen($this->_server['host'], $this->_server['port'], $errno, $errstr, $this->_server['timeout'])) {
+            if ($this->_smtp = @fsockopen($this->_server['host'], $this->_server['port'], $errno, $errstr, $this->_server['timeout'])) {
                 if (substr($response = fgets($this->_smtp), 0, 3) != self::READY) {
                     $this->close();
                     throw new ConnectionException('Server NOT ready! The server responded with this message:' . PHP_EOL . $response);
