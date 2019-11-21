@@ -445,13 +445,14 @@ class Mailer
      * Send
      *
      * @see http://www.pcvr.nl/tcpip/smtp_sim.htm
+     * @param string|null $from Envelope (SMTP) from
      * @return string
      * @throws Exception
      */
-    public function send()
+    public function send($from = null)
     {
         // Check for minimum requirements
-        if (empty($this->_from))
+        if (empty($this->_from) && empty($from))
             throw new Exception('Sender undefined');
 
         if (empty($this->_to) && empty($this->_cc) && empty($this->_bcc))
@@ -603,7 +604,12 @@ class Mailer
 
         $this->_lastMessageBody = $message;
 
-        $res = $this->smtp->send($this->_from['address'], $recipients, $message);
+        $res = $this->smtp->send(
+            !empty($from) ? $from : $this->_from['address'],
+            $recipients,
+            $message
+        );
+
         return substr($res, 0, 3) == ISmtp::OK;
     }
 
